@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact name="NServer:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/NServer_jar</output-path>
+    <root id="root">
+      <element id="archive" name="NServer.jar">
+        <element id="module-output" name="NServer" />
+      </element>
+      <element id="library" level="project" name="netty-all-4.1.17.Final" />
+    </root>
+  </artifact>
+</component>
