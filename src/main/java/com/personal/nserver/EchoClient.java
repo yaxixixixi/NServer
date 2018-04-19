@@ -6,6 +6,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LogLevel;
@@ -45,6 +46,7 @@ public class EchoClient {
                             idleStateTrigger,
                             new StringDecoder(),
                             new StringEncoder(),
+                            new JsonObjectDecoder();
                             new ClientHandler()
                     };
                 }
