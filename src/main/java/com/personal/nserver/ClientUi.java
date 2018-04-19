@@ -2,10 +2,8 @@ package com.personal.nserver;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
-public class ClientUi implements ActionListener {
+public class ClientUi{
 
     private JTextField field;
     private JLabel prompt;
@@ -18,46 +16,57 @@ public class ClientUi implements ActionListener {
     private void createUi() {
         JFrame f = new JFrame();
         Container container = f.getContentPane();
-        container.setLayout(new FlowLayout(FlowLayout.LEFT));
-
-        JLabel label = new JLabel("标识型号");
-        field = new JTextField();
-        field.setPreferredSize(new Dimension(200, 20));
-        JButton connect = new JButton("连接服务");
+        container.setLayout(new BorderLayout());
 
 
-        prompt = new JLabel();
+        JPanel paramPanel = new JPanel();
+        paramPanel.setLayout(new BoxLayout(paramPanel,BoxLayout.Y_AXIS));
 
+        JLabel label1 = new JLabel("型号:phoneModel");
+        JTextField field1 = new JTextField("model-number1");
+        JLabel label2 = new JLabel("序列号:serialNumber");
+        JTextField field2 = new JTextField("serial-number1");
+        JLabel label3 = new JLabel("工号:jobNember");
+        JTextField field3 = new JTextField("job-nember1");
 
-        container.add(label);
-        container.add(field);
-        container.add(connect);
-        container.add(prompt);
+        field1.setMaximumSize(new Dimension(300,30));
+        field2.setMaximumSize(new Dimension(300,30));
+        field3.setMaximumSize(new Dimension(300,30));
 
-        connect.addActionListener(this);
+        JButton connect = new JButton("connect to server");
+
+        paramPanel.add(label1);
+        paramPanel.add(field1);
+        paramPanel.add(label2);
+        paramPanel.add(field2);
+        paramPanel.add(label3);
+        paramPanel.add(field3);
+        paramPanel.add(Box.createVerticalStrut(50));
+        paramPanel.add(connect);
+        paramPanel.add(Box.createVerticalGlue());
+
+        container.add(paramPanel,BorderLayout.WEST);
+
+        connect.addActionListener(e -> {
+            ChannelInfo channelInfo = new ChannelInfo();
+            channelInfo.setPhoneModel(field1.getText());
+            channelInfo.setSerialNumber(field2.getText());
+            channelInfo.setJobNember(field3.getText());
+
+            EchoClient client = new EchoClient();
+            client.setClientInfo(channelInfo);
+            new Thread(() -> {
+                try {
+                    client.connect("127.0.0.1", 8080);
+                } catch (Exception e1) {
+                    e1.printStackTrace();
+                }
+            }).start();
+        });
 
         f.setSize(500, 500);
         f.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         f.setVisible(true);
     }
 
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        EchoClient client = new EchoClient();
-        String text = field.getText();
-        if (text.length() == 0) {
-            prompt.setText("请输入合法字符");
-            return;
-        } else {
-            prompt.setText("");
-        }
-        client.setText(text);
-        new Thread(() -> {
-            try {
-                client.connect("127.0.0.1", 8080);
-            } catch (Exception e1) {
-                e1.printStackTrace();
-            }
-        }).start();
-    }
 }

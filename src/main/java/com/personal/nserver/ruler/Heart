@@ -1,0 +1,10 @@
+客户端为模拟客户端
+
+需要客户端在连接服务时发送以下数据；
+同时心跳包也是发送以下数据；
+数据格式不可变，修改json的value值对应不同机器
+每次点击connect to server都会对应json生成一个新的client，建议修改值后再进行连接
+
+{"phoneModel":"xinghaoxxxxxxxxxxxxx","serialNumber":"chuanmaxxxxxxxxxxxxxx","jobNember":"gonghaoxxxxxxxxxxxxx"}
+
+

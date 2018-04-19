@@ -1,10 +1,13 @@
 package com.personal.nserver;
 
+import com.google.gson.Gson;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -24,7 +27,6 @@ public class EchoServer {
     private final AcceptorIdleStateTrigger idleStateTrigger = new AcceptorIdleStateTrigger();
     private OnNewEventListener l;
     private long readTimeout;
-    private String mask = "ClientInfo";
 
     public static void main(String[] args) {
         new EchoServer().startEchoServer(8080);
@@ -122,8 +124,7 @@ public class EchoServer {
                 channels.remove(channelInfo);
             }
         });
-        //break that channel
-        ctx.close();
+
         //update ui  close -> inactive ->onChannelsChanged
 
     }
@@ -137,22 +138,24 @@ public class EchoServer {
 //            ch.pipeline().addLast(new DelimiterBasedFrameDecoder(1024,delimiter));//基于特殊字符进行拆解
             //1024 maxFrameLength 表示单条消息最大长度，如果达到长度后还没有找到分隔符，抛出TooLongFrameException
             ch.pipeline().addLast(new IdleStateHandler(readTimeout, 0, 0, TimeUnit.SECONDS));
+//            DelimiterBasedFrameDecoder decoder = new DelimiterBasedFrameDecoder(1024, Unpooled.copiedBuffer("$_".getBytes()));
+//            ch.pipeline().addLast(decoder);
             ch.pipeline().addLast(idleStateTrigger);
             ch.pipeline().addLast(new StringDecoder());
             ch.pipeline().addLast(new StringEncoder());
-            ch.pipeline().addLast(new JsonObjectDecoder());
             ch.pipeline().addLast(new ServerHandler());
         }
     }
 
     class ServerHandler extends ChannelInboundHandlerAdapter {
-
+        private ChannelInfo lInfo;
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             super.channelActive(ctx);
             ChannelInfo channelInfo = new ChannelInfo();
             channelInfo.setCtx(ctx);
+            lInfo = channelInfo;//save an instance
             channels.add(channelInfo);
             onChannelsChanged(channelInfo,Operate.ADD);
             System.out.println("one Client which ... has established .");
@@ -165,10 +168,11 @@ public class EchoServer {
             super.channelInactive(ctx);
             channels.forEach(info -> {
                 if (info.getCtx() == ctx) {
-                    channels.remove(info);
                     onChannelsChanged(info,Operate.REMOVE);
                 }
             });
+            channels.removeIf(info ->info.getCtx() == ctx);
+            lInfo = null;
 
             onMessage(ctx,":Client got disconnected.");
         }
@@ -176,13 +180,22 @@ public class EchoServer {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             String req = (String) msg;
-            if (req.contains(mask)) {
-                channels.forEach(info -> {
-                    if (info.getCtx() == ctx) {
-                        info.setPhoneModel(req.replace(mask,""));
-                        onChannelsChanged(info,Operate.UPDATE);
-                    }
-                });
+
+            if (req.startsWith("{")) {
+                ChannelInfo json = new Gson().fromJson(req, ChannelInfo.class);
+                json.setCtx(ctx);
+                if (!json.equals(lInfo)){
+                    channels.forEach(info -> {
+                        if (info.getCtx() == ctx) {
+                            info.setJobNember(json.getJobNember());
+                            info.setPhoneModel(json.getPhoneModel());
+                            info.setSerialNumber(json.getSerialNumber());
+                            System.out.println("gengxin ui*********************");
+                            onChannelsChanged(info,Operate.UPDATE);
+                        }
+                    });
+                }
+
             }
             onMessage(ctx, req);
 
@@ -207,7 +220,10 @@ public class EchoServer {
                 if (state == IdleState.READER_IDLE) {
                     System.out.println("read timeout...");
                     onChannelReadTimeOut(ctx);
-                    throw new Exception("Idle exception");
+                    onMessage(ctx,"read timeout...");
+                    //break that channel
+                    ctx.close();
+//                    throw new Exception("read timeout...");
                 }
             } else {
                 super.userEventTriggered(ctx, evt);

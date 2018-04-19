@@ -1,11 +1,14 @@
 package com.personal.nserver;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.json.JsonObjectDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
@@ -20,7 +23,6 @@ import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 public class EchoClient {
-    private String text = "";
 
     protected final HashedWheelTimer timer = new HashedWheelTimer();
     private static final ByteBuf HEARTBEAT_SEQUENCE = Unpooled.unreleasableBuffer(Unpooled.copiedBuffer("Heartbeat",
@@ -42,11 +44,11 @@ public class EchoClient {
                 public ChannelHandler[] handlers() {
                     return new ChannelHandler[]{
                             this,
-                            new IdleStateHandler(0, 4, 0, TimeUnit.SECONDS),
+                            new IdleStateHandler(0, 12, 0, TimeUnit.SECONDS),
+//                            new DelimiterBasedFrameDecoder(1024, Unpooled.copiedBuffer("$_".getBytes())),
+                            new StringEncoder(),
                             idleStateTrigger,
                             new StringDecoder(),
-                            new StringEncoder(),
-                            new JsonObjectDecoder();
                             new ClientHandler()
                     };
                 }
@@ -84,10 +86,7 @@ public class EchoClient {
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             String message = (String) msg;
             System.out.println(message);
-            if (message.equals("Heartbeat")) {
-                ctx.write("has read message from server");
-                ctx.flush();
-            }
+
             ReferenceCountUtil.release(msg);
         }
 
@@ -97,9 +96,7 @@ public class EchoClient {
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             System.out.println("激活时间是：" + new Date());
             System.out.println("ClientHandler channelActive");
-            System.out.println(ctx);
-//            ctx.writeAndFlush(Unpooled.copiedBuffer("hello server",CharsetUtil.UTF_8));
-            ctx.writeAndFlush("ClientInfo"+text);
+            ctx.writeAndFlush(new Gson().toJson(clientInfo));
             ctx.fireChannelActive();
         }
 
@@ -119,6 +116,14 @@ public class EchoClient {
 
     }
 
+    private String createJsonStrInfo(){
+        ChannelInfo channelInfo = new ChannelInfo();
+        channelInfo.setPhoneModel("safasrtertwretw54wert");
+        channelInfo.setJobNember("q123");
+        channelInfo.setSerialNumber("54wer5we2r1wqer54qwer2fdh1ghj74ty");
+        return new Gson().toJson(channelInfo);
+    }
+
     @ChannelHandler.Sharable
     public class ConnectorIdleStateTrigger extends ChannelInboundHandlerAdapter {
         @Override
@@ -127,7 +132,7 @@ public class EchoClient {
                 IdleState state = ((IdleStateEvent) evt).state();
                 if (state == IdleState.WRITER_IDLE) {
                     // write heartbeat to server
-                    ctx.writeAndFlush(HEARTBEAT_SEQUENCE.duplicate());
+                    ctx.writeAndFlush(new Gson().toJson(clientInfo));
                 }
             } else {
                 super.userEventTriggered(ctx, evt);
@@ -206,10 +211,12 @@ public class EchoClient {
         }
     }
 
+    private ChannelInfo clientInfo;
 
-    public void setText(String text) {
-        this.text = text;
+    public void setClientInfo(ChannelInfo info){
+        clientInfo = info;
     }
+
 
     public static void main(String[] args){
         try {

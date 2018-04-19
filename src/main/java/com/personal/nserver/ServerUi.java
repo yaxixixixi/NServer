@@ -48,7 +48,7 @@ public class ServerUi implements OnNewEventListener {
         portField.setMinimumSize(new Dimension(60, 20));
         connectBtn = new JButton("开启服务");
         JLabel timeoutLabel = new JLabel("读超时(s):");
-        timeoutField = new JTextField("5");
+        timeoutField = new JTextField("12");
         timeoutField.setMaximumSize(new Dimension(60, 20));
         timeoutField.setPreferredSize(new Dimension(60, 20));
         timeoutField.setMinimumSize(new Dimension(60, 20));
@@ -73,7 +73,7 @@ public class ServerUi implements OnNewEventListener {
 
         sendMsg = new TextArea();
         clearMsg = new JButton("clearMsg");
-        sendToClient = new JButton("send to client");
+        sendToClient = new JButton("send to selected client");
         sendToClient.setEnabled(false);
         sendMsg.setMaximumSize(new Dimension(700, 60));
         sendMsg.setPreferredSize(new Dimension(500, 60));
@@ -107,8 +107,8 @@ public class ServerUi implements OnNewEventListener {
         comboBox.addItemListener(e -> {
             Object item = e.getItem();
             if (item instanceof ChannelInfo) {
-                String clientInfo = ((ChannelInfo) item).getPhoneModel();
-                cardLayout.show(cardPanel, clientInfo);
+                String cons = ((ChannelInfo) item).getPhoneModel()+((ChannelInfo) item).getSerialNumber();
+                cardLayout.show(cardPanel, cons);
             } else if (item instanceof String) {
                 cardLayout.show(cardPanel, ((String) item));
             }
@@ -117,7 +117,7 @@ public class ServerUi implements OnNewEventListener {
 
         cardPanel.add(msgInfo, SERVER);
 
-        clearInfo = new JButton("clearMsg sendMsg");
+        clearInfo = new JButton("clear info");
 
 
         container.add(p1);
@@ -149,16 +149,20 @@ public class ServerUi implements OnNewEventListener {
         clearMsg.addActionListener(e -> sendMsg.setText(""));
 
         sendToClient.addActionListener(e -> {
-            sendMsgToAllClient(true);
+            sendMsgToClient(true);
         });
 
-        clearInfo.addActionListener(e -> msgInfo.setText(""));
+        clearInfo.addActionListener(e -> {
+//            ChannelInfo item = (ChannelInfo) comboBox.getSelectedItem();
+//            String cardCons = item.getPhoneModel() + item.getSerialNumber();
+            msgInfo.setText("");
+        });
 
 
     }
 
 
-    private void sendMsgToAllClient(boolean selectedOnly) {
+    private void sendMsgToClient(boolean selectedOnly) {
         for (Component component : clientLayout.getComponents()) {
             ChannelInfo info = ((MyBox) component).getInfo();
             if (selectedOnly) {
@@ -176,7 +180,7 @@ public class ServerUi implements OnNewEventListener {
             if (component instanceof MyTextArea) {
                 ChannelInfo info = ((MyTextArea) component).getInfo();
                 if (info.getCtx() == ctx) {
-                    String clientInfo = info.getPhoneModel();
+                    String clientInfo = info.getPhoneModel()+"-"+info.getSerialNumber();
                     String prefix = clientInfo.length() == 0 ? "server" : clientInfo;
                     appendInfo((MyTextArea) component, prefix + ":" + msg);
                     break;
@@ -230,7 +234,7 @@ public class ServerUi implements OnNewEventListener {
             }
             if (operate == Operate.UPDATE) {
                 comboBoxModel.addElement(info);
-                cardPanel.add(new MyTextArea(info), info.getPhoneModel());
+                cardPanel.add(new MyTextArea(info), info.getPhoneModel()+info.getSerialNumber());
             } else {
                 comboBoxModel.removeElement(info);
                 for (Component component : cardPanel.getComponents()) {
@@ -250,7 +254,7 @@ public class ServerUi implements OnNewEventListener {
         private ChannelInfo info;
 
         public MyBox(ChannelInfo info, boolean selected) {
-            super(info.getPhoneModel(), selected);
+            super(info.getPhoneModel()+"-"+info.getSerialNumber(), selected);
             this.info = info;
         }
 
@@ -260,7 +264,7 @@ public class ServerUi implements OnNewEventListener {
 
         public void setInfo(ChannelInfo info) {
             this.info = info;
-            setText(info.getPhoneModel());
+            setText(info.getPhoneModel()+"-"+info.getSerialNumber());
         }
     }
 
